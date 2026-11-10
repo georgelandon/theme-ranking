@@ -33,20 +33,26 @@ function App() {
   }, [refreshSettings])
 
   const current = settings ?? defaults
-  return <div className="app-shell">
-    <header className="site-header">
-      <a className="brand" href="#/" aria-label="Game Jam Theme Vote home"><span className="brand-icon"><Spark /></span><span>JAM<span className="brand-light"> / </span>COLLECTIVE<span className="brand-caption">GOOD GAMES START WITH AN IDEA.</span></span></a>
+  return <>
+    <div className="header-band"><header className="site-header">
+      <a className="brand" href="#/" aria-label="Game Jam Theme Vote home"><img className="cedarville-logo" src={`${import.meta.env.BASE_URL}cedarville-logo.png`} alt="Cedarville University" width="1200" height="301" /></a>
       <nav aria-label="Main navigation"><a href="#/" className={route === 'vote' ? 'nav-active' : ''}>Theme vote</a>{current.leaderboard_visible && settings && <a href="#/results" className={route === 'results' ? 'nav-active' : ''}>Results <span aria-hidden="true">↗</span></a>}</nav>
-      <span className="header-note"><span className="tiny-star">✳</span> A little inspiration. A lot of possibility.</span>
-    </header>
+      <span className="header-note">School of Engineering<br />and Computer Science</span>
+    </header></div>
 
+    <div className="app-shell">
     <main id="main-content">
       {settingsError && <div className="connection-error" role="alert">Couldn’t refresh competition: {settingsError} <button onClick={() => void refreshSettings()}>Try again</button></div>}
       {route === 'results' ? <Leaderboard visible={Boolean(settings?.leaderboard_visible)} checking={configured && !settings && !settingsError} refreshSettings={refreshSettings} /> : <>
         <section className="intro">
-          <div className="eyebrow"><span className="section-line" /> THE NEXT GREAT GAME STARTS HERE</div>
-          <div className="title-row"><h1>{current.title === defaults.title ? <>Game Jam<br /><span>Theme Vote<span className="title-dot">.</span></span></> : current.title}</h1><div className="hero-sticker" aria-hidden="true"><Spark /><span>SMALL IDEA.<br />BIG POTENTIAL.</span><span className="sticker-arrow">↙</span></div></div>
-          <p className="intro-copy">Two themes. One choice. Help shape what we make next.</p>
+          <div className="eyebrow"><span className="section-line" /> FALL MINI GAME JAM / 2026</div>
+          <div className="title-row"><h1>{current.title === defaults.title ? <>Game Jam<br /><span>Theme Vote<span className="title-dot">.</span></span></> : current.title}</h1><div className="hero-sticker" aria-hidden="true"><Spark /><span>8 HOURS.<br />ENDLESS IDEAS.</span><span className="sticker-arrow">↙</span></div></div>
+          <p className="intro-copy">Help choose the inspiration for Cedarville’s next great game.</p>
+          <div className="event-details" aria-label="Fall Mini Game Jam event details">
+            <div><span className="event-label">SAVE THE DATE</span><strong>Saturday, November 14</strong></div>
+            <div><span className="event-label">WHEN & WHERE</span><strong>9 AM – 5 PM <span>·</span> ENS 241</strong></div>
+            <div><span className="event-label">ALL STUDENTS WELCOME</span><strong>Bring a team or join one.</strong></div>
+          </div>
         </section>
         {!configured ? <section className="state-panel"><span className="state-icon">↗</span><h2>A great jam is on the way.</h2><p>Connect your Supabase project to open the voting room.</p><p className="muted">Add the public environment variables in <code>.env</code> and follow the README to set up your competition.</p></section>
           : !settings ? <section className="state-panel" aria-busy={!settingsError}><h2>{settingsError ? 'The voting room is taking a moment.' : 'Opening the voting room…'}</h2><p>We’ll have your next choice ready shortly.</p></section>
@@ -55,8 +61,8 @@ function App() {
         <section className="how-it-works" aria-label="How it works"><div><span className="step-number">01</span><h3>Go with your gut.</h3><p>Pick the theme you’d love to build a game around.</p></div><div><span className="step-number">02</span><h3>Keep the ideas flowing.</h3><p>Every choice helps. Vote as many times as you like.</p></div><div><span className="step-number">03</span><h3>Let the reveal surprise you.</h3><p>Rankings stay hidden until the results are revealed.</p></div></section>
       </>}
     </main>
-    <footer><span><Spark small /> MADE FOR CURIOUS MINDS & GAME MAKERS.</span><span>No accounts. Just opinions.<span className="footer-dot">✳</span></span></footer>
-  </div>
+    <footer><span><Spark small /> CEDARVILLE UNIVERSITY <span className="footer-divider">/</span> FALL MINI GAME JAM</span><span>No accounts. Just opinions.<span className="footer-dot">✳</span></span></footer>
+  </div></>
 }
 
 function Voting({ session, settings, refreshSettings }: { session: string; settings: Settings; refreshSettings: () => Promise<void> }) {

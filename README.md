@@ -143,6 +143,8 @@ Manual smoke checks after deploying:
 4. Disable voting while a browser has a pair loaded: its next submission must fail.
 5. Reveal results, check the winner, table, total count, and Refresh Results.
 
-Keep `package-lock.json` committed. No runtime images, fonts, or third-party tracking scripts are fetched. Theme illustrations are decorative CSS, with actual names/descriptions supplied by Supabase. Errors offer retry controls, requests have a 15-second timeout, cards are native keyboard-accessible buttons, status updates use live regions, and reduced-motion preferences are respected.
+Keep `package-lock.json` committed. The Cedarville logo is bundled locally; no external fonts or third-party tracking scripts are fetched. Theme illustrations are decorative CSS, with actual names/descriptions supplied by Supabase. Errors offer retry controls, requests have a 15-second timeout, cards are native keyboard-accessible buttons, status updates use live regions, and reduced-motion preferences are respected.
+
+The site uses Cedarville University's [official blue and gold palette](https://www.cedarville.edu/offices/creative-services/brand/logo) (`#003a63`, `#fdb813`). The unmodified [official logo](https://www.cedarville.edu/ResourcePackages/culayoutv9/assets/dist/images/cedarville-logo-new-2.png) is stored at `public/cedarville-logo.png`. Fall Mini Game Jam details in `src/App.tsx` follow the supplied Fall 2026 event poster: November 14, 9 AM–5 PM, ENS 241, open to all students. Update this event copy for future jams.
 
 Implementation references: [Supabase database functions and privileges](https://supabase.com/docs/guides/database/functions), [Vite deployment to GitHub Pages](https://vite.dev/guide/static-deploy).
