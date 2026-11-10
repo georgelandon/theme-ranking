@@ -1,5 +1,5 @@
 import { PGlite } from '@electric-sql/pglite'
-import { Pool } from 'pg'
+import { Pool, type PoolClient } from 'pg'
 import { readFileSync } from 'node:fs'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -12,8 +12,12 @@ const url = process.env.TEST_DATABASE_URL
 
 describe('database API and privacy', () => {
   let db: PGlite | Pool
+  let connection: PoolClient | undefined
   const sql = async <T = Record<string, unknown>>(query: string, params: unknown[] = []) => {
-    const result = await db.query(query, params)
+    // SET ROLE is connection-local. pool.query releases (and on an expected
+    // permission error destroys) its connection, losing the role for the next
+    // assertion. Keep one checked-out client for all stateful test queries.
+    const result = await (connection ?? db).query(query, params)
     return result.rows as T[]
   }
   const vote = (a = A, b = B, winner = A, participant = session(), request = session()) =>
@@ -21,6 +25,7 @@ describe('database API and privacy', () => {
 
   beforeAll(async () => {
     db = url ? new Pool({ connectionString: url, max: 24 }) : new PGlite()
+    if (db instanceof Pool) connection = await db.connect()
     // Use ONLY a disposable test database. Never point TEST_DATABASE_URL at production.
     const bootstrap = `drop schema public cascade; create schema public;
       do $$ begin if not exists(select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
@@ -29,7 +34,7 @@ describe('database API and privacy', () => {
       alter default privileges in schema public grant all on tables to anon, authenticated;
       alter default privileges in schema public grant execute on functions to anon, authenticated;`
     if (db instanceof PGlite) { await db.exec(bootstrap); await db.exec(migration) }
-    else { await db.query(bootstrap); await db.query(migration) }
+    else { await connection!.query(bootstrap); await connection!.query(migration) }
   })
   beforeEach(async () => {
     await sql('truncate public.votes, public.items;')
@@ -37,7 +42,10 @@ describe('database API and privacy', () => {
     await sql('insert into public.items (id,name) values ($1, $2),($3,$4),($5,$6)', [A, 'Time Loop', B, 'Hidden Worlds', C, 'Gravity'])
   })
   afterEach(async () => { await sql('reset role') })
-  afterAll(async () => { if (db instanceof PGlite) await db.close(); else await db.end() })
+  afterAll(async () => {
+    if (db instanceof PGlite) await db.close()
+    else { connection?.release(); await db.end() }
+  })
 
   it('defaults to open voting and private results', async () => {
     expect((await sql<{ s: Record<string, unknown> }>('select public.get_settings() s'))[0].s).toMatchObject({ voting_enabled: true, leaderboard_visible: false })
@@ -50,6 +58,7 @@ describe('database API and privacy', () => {
       for (const table of ['items', 'votes', 'competition_settings']) {
         for (const query of [`select * from public.${table}`, `delete from public.${table}`, `update public.${table} set id = id`]) {
           await expect(sql(query)).rejects.toThrow(/permission denied/)
+          expect((await sql<{ role: string }>('select current_user as role'))[0].role).toBe(role)
         }
       }
       await expect(sql("insert into public.items(name) values ('Injected')")).rejects.toThrow(/permission denied/)
@@ -163,7 +172,13 @@ describe('database API and privacy', () => {
   })
 
   it.skipIf(!url)('handles concurrent crossed pairs without lost updates or deadlocks (real PostgreSQL)', async () => {
-    await Promise.all(Array.from({ length: 30 }, (_, i) => i % 3 === 0 ? vote(A, B, A) : i % 3 === 1 ? vote(B, C, B) : vote(C, A, C)))
+    // Deliberately use the pool here: a checked-out client would serialize the
+    // queries in Node and would not exercise PostgreSQL's concurrent row locks.
+    const pool = db as Pool
+    await Promise.all(Array.from({ length: 30 }, (_, i) => {
+      const [a, b, winner] = i % 3 === 0 ? [A, B, A] : i % 3 === 1 ? [B, C, B] : [C, A, C]
+      return pool.query('select public.submit_vote($1,$2,$3,$4,$5)', [a, b, winner, session(), session()])
+    }))
     const rows = await sql<{ wins: number; losses: number; comparisons: number; rating: string }>('select * from public.items')
     expect(rows.reduce((n, r) => n + r.comparisons, 0)).toBe(60)
     expect(rows.reduce((n, r) => n + r.wins, 0)).toBe(30)
